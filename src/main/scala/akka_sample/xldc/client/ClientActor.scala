@@ -33,6 +33,9 @@ class ClientActor (serverPath: String, clients: List[String]) extends Actor with
       checkFileActor ! RequstCheckFile(taskArray)
     }
     
+    case ResponseCheckFile(response) =>
+      serverActor ! ResponseCheckFile(response)
+    
     case _ => println("")
     
     
