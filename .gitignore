@@ -1,1 +1,7 @@
-/target/
+*.class
+*.jar
+.cache
+.project
+.classpath
+target/*
+/bin/
