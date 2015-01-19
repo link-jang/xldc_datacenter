@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+ <html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" >
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="stylesheet" href="/stat/css/bootstrap.min.css"/>
+		<script  src="/stat/js"></script>
+		<script src="http://code.jquery.com/jquery-latest.js"></script>
+		
+	</head>
+   <body>
+     <h1>Say hello to xldc monitor!</h1>
+   	 <div class="row">
+  		<div class="col-md-1"></div>
+  		<div class="col-md-10">
+  			<table class="table table-hover">
+  				<thead>
+  				 	<tr>
+  				 		<td>dataName</td>
+  				 		<td>oriMechin</td>
+  				 		<td>oriFile</td>
+  				 		<td>destMechin</td>
+  				 		<td>desFile</td>
+  				 		<td>fileType</td>
+  				 	</tr>
+  				</thead >
+  				<tbody id="table">
+  				
+  				</tbody>
+  			</table>
+  		</div>
+	 </div>
+     
+   <script >
+
+   $(document).ready(function(){ 
+	   
+
+   	   $.get("/getMetaData_json", function(data,status){
+ 
+   		  data =eval(data)
+   		  for(d in data){
+ 			var obj = data[d]
+ 			var tag=""
+   	   		
+   	   		tag = tag + "<td>" + obj["dataName"] +"</td>"
+   	   		tag = tag + "<td>" + obj["oriMechin"] +"</td>"
+   	 		tag = tag + "<td>" + obj["oriFile"] +"</td>"
+   			tag = tag + "<td>" + obj["destMechin"] +"</td>"
+   			tag = tag + "<td>" + obj["desFile"] +"</td>"
+   			tag = tag + "<td>" + obj["fileType"] +"</td>"
+   	   		
+   	   		$("#table").append("<tr> " + tag + "</tr>")
+   	   	   	
+   	   	   	
+   		  	
+   		  }
+   	   })
+   	 
+    })
+   </script>
+     
+
+   </body>
+ </html>

@@ -175,6 +175,46 @@ class DbActor(args: Array[String]) extends Actor with ActorLogging{
     
     
     
+    case RequstMetaData(fileType) => {
+      try{
+	      transaction{
+	        val files = 
+	        from(xldc_db.rsyncDataMeta)(s => where (s.fileType === fileType)select (s))
+	        sender ! ResponseMetaData(files.toArray)
+	      }
+      
+      }catch{
+        
+        case ex: java.lang.Exception => 
+          log.error("error while selecet from  rsncDataMeta : " + ex.toString())
+          sender ! ResponseMetaData(new Array(0))
+      }
+      
+      
+    }
+    
+    
+    case RequstTaskData => {
+      
+      println("dbactor")
+      try{
+        transaction{
+          val tasks = 
+            from(xldc_db.taskMeta)(t => where(t.isCompleted === false)select (t))
+            
+            sender ! ResponseTaskData(tasks.toArray)
+        }
+      }catch {
+        
+        case ex: java.lang.Exception =>
+          log.error("error while select from taskmeta :" + ex.toString())
+          sender ! ResponseTaskData(new Array(0))
+      }
+      
+    }
+    
+    
+    
     
     
     case _ => log.info("")

@@ -20,6 +20,7 @@ class ServerActor(clients: List[String]) extends Actor with ActorLogging{
     
     println("start server")
   	dbActor !  RequstGenerFile(new RsyncDataMeta(0, "zyzx_data", "twin07320:2553", "/data1/download/result/speed_${day}_${hour}", "twin07364:2553", "/tmp/speed_${day}_${hour}", "hour"))
+  	dbActor !  RequstGenerFile(new RsyncDataMeta(0, "xldc_data", "192.168.109.195:2553", "/data1/download/result/speed_${day}_${hour}", "192.168.109.195:2553", "/tmp/speed_${day}_${hour}", "hour"))
     dbActor !  RequstGenerTask("hour", "20150112", "22")
     dbActor !  RequstExistTask("hour")
     

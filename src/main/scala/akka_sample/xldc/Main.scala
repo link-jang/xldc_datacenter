@@ -1,5 +1,6 @@
 package akka_sample.xldc
 import akka.actor.ActorSystem
+import akka.actor.ActorRef
 import akka.actor.Props
 import akka_sample.xldc.TransactionObj._
 import akka_sample.xldc.persist._
@@ -10,16 +11,16 @@ import com.typesafe.config.ConfigException
 import akka_sample.xldc.master.DbActor
 import akka.io.IO
 import spray.can.Http
+import akka_sample.xldc.master.httpserver.HttpServerActor
+import scala.io.Source
 
 object Main {
   
     
   def main(args: Array[String]) {
-    
 
     implicit val system = ActorSystem("DataCenterSystem")
-    var handler = system.actorOf(Props[HttpServerActor], name = "webActor")
-    IO(Http) ! Http.Bind(handler, interface = "localhost", port = 8080)
+    
     
     
     try{
@@ -34,8 +35,11 @@ object Main {
       
       
       if (servertype == "server"){
-//        system.actorOf(Props(classOf[DbActor],Array(jdbcurl, jdbcuser, jdbcpassword)), name = "dbActor")
-//        system.actorOf(Props(classOf[ServerActor],clientPath.toList), name = "serverActor")
+        val dbactor = system.actorOf(Props(classOf[DbActor],Array(jdbcurl, jdbcuser, jdbcpassword)), name = "dbActor")
+        system.actorOf(Props(classOf[ServerActor],clientPath.toList), name = "serverActor")
+        
+        var handler = system.actorOf(Props(classOf[HttpServerActor], dbactor), name = "webActor")
+        IO(Http) ! Http.Bind(handler, interface = "localhost", port = 8080)
       }
       else if(servertype == "client"){
         system.actorOf(Props(classOf[ClientActor], serverPath, clientPath.toList), name = "clientActor")

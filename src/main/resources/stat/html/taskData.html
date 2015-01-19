@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+ <html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" >
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="stylesheet" href="/stat/css/bootstrap.min.css"/>
+		<script  src="/stat/js"></script>
+		<script src="http://code.jquery.com/jquery-latest.js"></script>
+		
+	</head>
+   <body>
+     <h1>Say hello to xldc task!</h1>
+   	 <div class="row">
+  		<div class="col-md-1"></div>
+  		<div class="col-md-10">
+  			<table class="table table-hover">
+  				<thead>
+  				 	<tr>
+  				 		<td>oriMechin</td>
+  				 		<td>oriFile</td>
+  				 		<td>desMechin</td>
+  				 		<td>desFile</td>
+  				 		<td>taskType</td>
+  				 		<td>fileType</td>
+  				 		<td>day</td>
+  				 		<td>hour</td>
+  				 		<td>isExits</td>
+  				 		<td>isNotified</td>
+  				 		<td>notifiedTime</td>
+  				 		<td>isCompleted</td>
+  				 		<td>completedTime</td>
+  				 		<td>filesize</td>
+  				 		
+  				 	</tr>
+  				</thead >
+  				<tbody id="table">
+  				
+  				</tbody>
+  			</table>
+  		</div>
+	 </div>
+     
+   <script >
+
+   $(document).ready(function(){ 
+	   
+
+   	   $.get("/getTaskData_json", function(data,status){
+ 
+   		  data =eval(data)
+   		  for(d in data){
+ 			var obj = data[d]
+ 			var tag=""
+   	   		
+   	   		tag = tag + "<td>" + obj["oriMechin"] +"</td>"
+   	   		tag = tag + "<td>" + obj["oriFile"] +"</td>"
+   	 		tag = tag + "<td>" + obj["desMechin"] +"</td>"
+   			tag = tag + "<td>" + obj["desFile"] +"</td>"
+   			tag = tag + "<td>" + obj["taskType"] +"</td>"
+   			tag = tag + "<td>" + obj["fileType"] +"</td>"
+   			tag = tag + "<td>" + obj["day"] +"</td>"
+   			tag = tag + "<td>" + obj["hour"] +"</td>"
+   			tag = tag + "<td>" + obj["isExits"] +"</td>"
+   			tag = tag + "<td>" + obj["isNotified"] +"</td>"
+   			tag = tag + "<td>" + obj["notifiedTime"] +"</td>"
+   			tag = tag + "<td>" + obj["isCompleted"] +"</td>"
+   			tag = tag + "<td>" + obj["completedTime"] +"</td>"
+   			tag = tag + "<td>" + obj["filesize"] +"</td>"
+   			
+   	   		
+   	   		$("#table").append("<tr> " + tag + "</tr>")
+   	   	   	
+   	   	   	
+   		  	
+   		  }
+   	   })
+   	 
+    })
+   </script>
+     
+
+   </body>
+ </html>

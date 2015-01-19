@@ -11,6 +11,16 @@ object TransactionObj {
   
   case class RequestStr(str: String) extends RpcObj
   
+  
+  case class RequstMetaData(fileType: String) extends RpcObj
+  
+  case class ResponseMetaData(files: Array[RsyncDataMeta]) extends RpcObj
+  
+  
+  case class RequstTaskData extends RpcObj
+  case class ResponseTaskData(tasks: Array[TaskMeta]) extends RpcObj
+  
+  
   case class RequstCheckFile(taskType: Array[TaskMeta]) extends RpcObj
   
   case class ResponseCheckFile(status: Array[FileStatus]) extends RpcObj
