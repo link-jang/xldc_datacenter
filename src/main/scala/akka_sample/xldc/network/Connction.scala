@@ -1,14 +1,15 @@
 package akka_sample.xldc.network
-import java.net._
+import java.net.InetSocketAddress
 import java.nio._
 import java.nio.channels._
 import java.util.LinkedList
-import akka.event.Logging
+import java.util.logging
 import scala.collection.mutable.{ArrayBuffer, HashMap}
+import java.util.concurrent.ConcurrentLinkedQueue
 
 abstract class Connection (val channel: SocketChannel, val selector: Selector)   {
   
-  val log = Logging.getLogger(null)
+  val log = logging.Logger.getLogger(this.getClass().getSimpleName())
   
   channel.configureBlocking(false)
   channel.socket().setTcpNoDelay(true)
@@ -17,7 +18,7 @@ abstract class Connection (val channel: SocketChannel, val selector: Selector)  
   
   @volatile private var closed = false
   
-  var remoteAddress = channel.socket().getReceiveBufferSize().asInstanceOf[InetSocketAddress]
+  var remoteAddress = channel.socket().getRemoteSocketAddress().asInstanceOf[InetSocketAddress]
   
   def resetForceReregister(): Boolean
   
@@ -33,6 +34,16 @@ abstract class Connection (val channel: SocketChannel, val selector: Selector)  
   
   var onKeyInterestChangeCallback: (Connection, Int) => Unit = null
   
+  val onExceptionCallbacks = new ConcurrentLinkedQueue[(Connection, Throwable) => Unit]
+  
+  var onCloseCallback: Connection => Unit = null
+  
+  def onKeyInterestChange(callback: (Connection, Int) => Unit) {
+    onKeyInterestChangeCallback = callback
+  }
+  def onException(callback: (Connection, Throwable) => Unit) {
+    onExceptionCallbacks.add(callback)
+  }
   
   def read(): Boolean = {
     throw new UnsupportedOperationException(
@@ -56,6 +67,10 @@ abstract class Connection (val channel: SocketChannel, val selector: Selector)  
     
     
   }
+  
+  def onClose(callback: Connection => Unit) {
+    	onCloseCallback = callback
+    }
   
   protected def isClosed: Boolean = closed
   
@@ -95,7 +110,7 @@ class SendingConnection(val address : InetSocketAddress, selector_ : Selector)
     def addMessage(message: Message) {
        messages.synchronized {
          messages.add(message)
-         log.debug("Added [" + message + "] to outbox for sending to ")
+         log.info( "Added [" + message + "] to outbox for sending to ")
        }
      }
     
@@ -151,6 +166,7 @@ class SendingConnection(val address : InetSocketAddress, selector_ : Selector)
     outbox.synchronized{
       outbox.addMessage(message)
       needForceReregister = true
+      println("outbox length:" + outbox.messages.size())
     }
     
     if (channel.isConnected()){
@@ -172,10 +188,12 @@ class SendingConnection(val address : InetSocketAddress, selector_ : Selector)
     try {
       channel.register(selector, SelectionKey.OP_CONNECT)
       channel.connect(address)
+      println("Initiating connection to [" + address + "]:" + channel.isConnected())
       log.info("Initiating connection to [" + address + "]")
     }catch {
       case e: Exception => {
-        log.error("Error connection to " + address, e)
+        println("Error connection to " + address + e.toString)
+        log.info("Error connection to " + address + e.toString)
       }
       
     }
@@ -195,7 +213,7 @@ class SendingConnection(val address : InetSocketAddress, selector_ : Selector)
       registerInterest()
     }catch {
       case e: Exception =>{
-        log.warning("Error finishing connection to " + address, e)
+        log.info("Error finishing connection to " + address + e)
       }
     }
     true
@@ -206,6 +224,7 @@ class SendingConnection(val address : InetSocketAddress, selector_ : Selector)
     try {
       
       while (true){
+        println("currentBuffers:" + currentBuffers.size)
         if( currentBuffers.size == 0 ){
           outbox.synchronized{
             outbox.getChunk match {
@@ -229,6 +248,7 @@ class SendingConnection(val address : InetSocketAddress, selector_ : Selector)
         if (currentBuffers.size > 0) {
           val buffer = currentBuffers(0)
           val remainingBytes = buffer.remaining
+ 
           val writtenBytes = channel.write(buffer)
           if (buffer.remaining == 0) {
             currentBuffers -= buffer
@@ -257,7 +277,7 @@ class SendingConnection(val address : InetSocketAddress, selector_ : Selector)
       if(length == -1){
         close()
       }else if( length > 0) {
-        log.error("Unexpected data read from sendingConnection")
+        log.info("Unexpected data read from sendingConnection")
       }
       
     }catch{
@@ -324,7 +344,7 @@ class ReceivingConnection(
     
     
     override def read(): Boolean = {
-      try{
+//      try{
         while(true){
           if (currentChunk == null){
             val headBytesRead = channel.read(headerBuffer)
@@ -343,7 +363,7 @@ class ReceivingConnection(
               throw new Exception("unexpected number of bytes (" + headerBuffer.remaining() + ") in the header")
               
             }
-            
+          
             val header = MessageChunkHeader.create(headerBuffer)
             headerBuffer.clear()
             
@@ -402,15 +422,15 @@ class ReceivingConnection(
         
         
         
-      }catch{
-        case e: Exception => {
-          log.error("Error reading from connection to remote connection", e)
-          close()
-          return false
-        }
-        
-        
-      }
+//      }catch{
+//        case e: Exception => {
+//          log.info("Error reading from connection to remote connection" + e)
+//          close()
+//          return false
+//        }
+//        
+//        
+//      }
       
       true
       

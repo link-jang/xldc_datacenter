@@ -12,6 +12,7 @@ import akka.util.Timeout
 import scala.concurrent.duration._
 import akka.actor.Props
 import akka_sample.xldc.TransactionObj._
+import akka_sample.xldc.persist._
 
 class ServerActor(clients: List[String]) extends Actor with ActorLogging{
   
@@ -38,7 +39,9 @@ class ServerActor(clients: List[String]) extends Actor with ActorLogging{
   	clientActor += (client.substring(client.indexOf("@") + 1, client.indexOf("/user")) -> context.actorSelection(client))
   )
   
-//  clientActor.foreach(a => a._2 ! RpcNotify(null) )
+  
+  
+  clientActor.foreach(a => a._2 ! RpcNotify(null) )
   
   
   
@@ -93,8 +96,15 @@ class ServerActor(clients: List[String]) extends Actor with ActorLogging{
     }
     
     case RpcResponseNotify(task, status) => {
-    	if (status)
-    		dbActor ! UpdateNotifyTask(task.id, status)
+    	if (status){
+    		task match {
+    		  case null => log.error("recevie null response notify from :" + sender.path)
+    		  case t: TaskMeta => 
+    		    dbActor ! UpdateNotifyTask(task.id, status)
+    		}
+    		
+    		
+    	}
     }
     
     case RpcResponseComplete(task, status) => {

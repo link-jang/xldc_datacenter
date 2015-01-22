@@ -44,13 +44,15 @@ private object MessageChunkHeader {
       throw new IllegalArgumentException("Cannot convert buffer data to Message")
     }
     val typ = buffer.getLong()
+    println("typ" + typ)
     val id = buffer.getInt()
     val totalSize = buffer.getInt()
     val chunkSize = buffer.getInt()
     val other = buffer.getInt()
     val hasError = buffer.get() != 0
     val securityNeg = buffer.getInt()
-    val ipSize = buffer.getInt()
+    var ipSize = buffer.getInt()
+    if (ipSize < 0) ipSize = 0 
     val ipBytes = new Array[Byte](ipSize)
     buffer.get(ipBytes)
     val ip = InetAddress.getByAddress(ipBytes)
@@ -128,6 +130,34 @@ object Message {
     newMessage
     
     
+  }
+  
+  def createBufferMessage(dataBuffers: Seq[ByteBuffer], ackId: Int): BufferMessage = {
+    if (dataBuffers == null) {
+      return new BufferMessage(0, new ArrayBuffer[ByteBuffer], ackId)
+    }
+    if (dataBuffers.exists(_ == null)) {
+      throw new Exception("Attempting to create buffer message with null buffer")
+    }
+    new BufferMessage(0, new ArrayBuffer[ByteBuffer] ++= dataBuffers, ackId)
+  }
+
+  def createBufferMessage(dataBuffers: Seq[ByteBuffer]): BufferMessage =
+    createBufferMessage(dataBuffers, 0)
+
+  def createBufferMessage(dataBuffer: ByteBuffer, ackId: Int): BufferMessage = {
+    if (dataBuffer == null) {
+      createBufferMessage(Array(ByteBuffer.allocate(0)), ackId)
+    } else {
+      createBufferMessage(Array(dataBuffer), ackId)
+    }
+  }
+
+  def createBufferMessage(dataBuffer: ByteBuffer): BufferMessage =
+    createBufferMessage(dataBuffer, 0)
+
+  def createBufferMessage(ackId: Int): BufferMessage = {
+    createBufferMessage(new Array[ByteBuffer](0), ackId)
   }
   
   
