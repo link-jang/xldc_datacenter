@@ -1,6 +1,8 @@
 package akka_sample.xldc.network
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
+import com.google.common.base.Charsets._
+
 import scala.collection.mutable.ArrayBuffer
 import java.net.{InetAddress, InetSocketAddress}
 
@@ -44,13 +46,11 @@ private object MessageChunkHeader {
       throw new IllegalArgumentException("Cannot convert buffer data to Message")
     }
     val typ = buffer.getLong()
-    println("typ" + typ)
     val id = buffer.getInt()
     val totalSize = buffer.getInt()
     val chunkSize = buffer.getInt()
     val other = buffer.getInt()
     val hasError = buffer.get() != 0
-    val securityNeg = buffer.getInt()
     var ipSize = buffer.getInt()
     if (ipSize < 0) ipSize = 0 
     val ipBytes = new Array[Byte](ipSize)
@@ -118,7 +118,9 @@ object Message {
   }
   
   def create(header: MessageChunkHeader): Message = {
-    
+
+
+
     val newMessage: Message = header.typ match {
       case BUFFER_MESSAGE => new BufferMessage(header.id,
         ArrayBuffer(ByteBuffer.allocate(header.totalSize)), header.other)
@@ -131,15 +133,19 @@ object Message {
     
     
   }
+  var i = 0
+  def  getNew() : Int = {
+    if(i + 1 < Int.MaxValue) i + 1 else 0
+  }
   
   def createBufferMessage(dataBuffers: Seq[ByteBuffer], ackId: Int): BufferMessage = {
     if (dataBuffers == null) {
-      return new BufferMessage(0, new ArrayBuffer[ByteBuffer], ackId)
+      return new BufferMessage(getNew, new ArrayBuffer[ByteBuffer], ackId)
     }
     if (dataBuffers.exists(_ == null)) {
       throw new Exception("Attempting to create buffer message with null buffer")
     }
-    new BufferMessage(0, new ArrayBuffer[ByteBuffer] ++= dataBuffers, ackId)
+    new BufferMessage(getNew, new ArrayBuffer[ByteBuffer] ++= dataBuffers, ackId)
   }
 
   def createBufferMessage(dataBuffers: Seq[ByteBuffer]): BufferMessage =
@@ -151,6 +157,14 @@ object Message {
     } else {
       createBufferMessage(Array(dataBuffer), ackId)
     }
+  }
+
+
+
+  def createErrorMessage(exception: Exception, ackId: Int): BufferMessage = {
+    val errorMessage = createBufferMessage(ByteBuffer.wrap("error recevie".getBytes(UTF_8)), ackId)
+    errorMessage.hasError = true
+    errorMessage
   }
 
   def createBufferMessage(dataBuffer: ByteBuffer): BufferMessage =

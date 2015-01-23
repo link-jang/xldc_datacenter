@@ -115,23 +115,26 @@ class SendingConnection(val address : InetSocketAddress, selector_ : Selector)
      }
     
     def getChunk: Option[MessageChunk] = {
+
       messages.synchronized{
         while(! messages.isEmpty()) {
           val message = messages.removeFirst()
           
           val chunk = message.getChunkForSending(defaultChunkSize)
-          
+
           if( chunk.isDefined){
+
             messages.add(message)
             nextMessageToBeUsed = nextMessageToBeUsed + 1
-            
+
             if(!message.start){
               message.start = true
               message.starttime = System.currentTimeMillis()
-              return chunk
-            }else{
-              message.finishtime = System.currentTimeMillis()
+
             }
+            return chunk
+          }else{
+            message.finishtime = System.currentTimeMillis()
           }
         
         }
@@ -156,6 +159,7 @@ class SendingConnection(val address : InetSocketAddress, selector_ : Selector)
   
   override def registerInterest() {
     changeConnectionKeyInterest(SelectionKey.OP_WRITE | DEFAULT_INTEREST )
+
   }
   
   override def unregisterInterest() {
@@ -201,22 +205,32 @@ class SendingConnection(val address : InetSocketAddress, selector_ : Selector)
   
   
   def finishConnect(force: Boolean): Boolean = {
-    
+
     try {
-      
-      val connected = channel.finishConnect()
-      if (! force && ! connected) {
-        log.info("fail to finish connect")
+      // Typically, this should finish immediately since it was triggered by a connect
+      // selection - though need not necessarily always complete successfully.
+      val connected = channel.finishConnect
+      if (!force && !connected) {
+        println(
+          "finish connect failed [" + address + "], " + outbox.messages.size + " messages pending")
         return false
       }
-      
+
+      // Fallback to previous behavior - assume finishConnect completed
+      // This will happen only when finishConnect failed for some repeated number of times
+      // (10 or so)
+      // Is highly unlikely unless there was an unclean close of socket, etc
       registerInterest()
-    }catch {
-      case e: Exception =>{
-        log.info("Error finishing connection to " + address + e)
+      println("Connected to [" + address + "], " + outbox.messages.size + " messages pending")
+    } catch {
+      case e: Exception => {
+        println("Error finishing connection to " + address, e)
+
       }
     }
     true
+
+
     
   }
   
@@ -224,7 +238,7 @@ class SendingConnection(val address : InetSocketAddress, selector_ : Selector)
     try {
       
       while (true){
-        println("currentBuffers:" + currentBuffers.size)
+
         if( currentBuffers.size == 0 ){
           outbox.synchronized{
             outbox.getChunk match {
@@ -248,7 +262,6 @@ class SendingConnection(val address : InetSocketAddress, selector_ : Selector)
         if (currentBuffers.size > 0) {
           val buffer = currentBuffers(0)
           val remainingBytes = buffer.remaining
- 
           val writtenBytes = channel.write(buffer)
           if (buffer.remaining == 0) {
             currentBuffers -= buffer
@@ -344,7 +357,7 @@ class ReceivingConnection(
     
     
     override def read(): Boolean = {
-//      try{
+      try{
         while(true){
           if (currentChunk == null){
             val headBytesRead = channel.read(headerBuffer)
@@ -352,7 +365,7 @@ class ReceivingConnection(
               close()
               return false
             }
-            
+
             if(headerBuffer.remaining() > 0){
               return true
             }
@@ -375,7 +388,7 @@ class ReceivingConnection(
                   }
                   
                   currentChunk = null
-                  
+
                   return true
                 }else{
                   currentChunk = inbox.getChunk(header).orNull
@@ -400,14 +413,14 @@ class ReceivingConnection(
             close()
             return false
           }
-          
+
           if (currentChunk.buffer.remaining == 0) {
      
             val bufferMessage = inbox.getMessageForChunk(currentChunk).get
+
             if (bufferMessage.isCompletelyReceived) {
               bufferMessage.flip()
               bufferMessage.finishtime = System.currentTimeMillis
- 
 
               if (onReceiveCallback != null) {
                 onReceiveCallback(this, bufferMessage)
@@ -422,15 +435,15 @@ class ReceivingConnection(
         
         
         
-//      }catch{
-//        case e: Exception => {
-//          log.info("Error reading from connection to remote connection" + e)
-//          close()
-//          return false
-//        }
-//        
-//        
-//      }
+      }catch{
+        case e: Exception => {
+          log.info("Error reading from connection to remote connection" + e)
+          close()
+          return false
+        }
+
+
+      }
       
       true
       

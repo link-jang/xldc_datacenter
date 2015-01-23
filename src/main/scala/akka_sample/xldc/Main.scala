@@ -24,25 +24,22 @@ object Main {
     
     
     try{
-      val servertype = Configrature.servertype(system)
-      val serverPath = Configrature.serverPath(system)
-      val clientPath = Configrature.clientPath(system)
+      val servertype = system.settings.config.getValue("akka.serverclient.type").unwrapped().toString()
+      val serverPath = system.settings.config.getValue("akka.serverclient.server").unwrapped().toString()
+      val clientPath = system.settings.config.getValue("akka.serverclient.client").unwrapped().toString().replaceAll("(\\[|\\]|\\s+)", "").split(",")
       
       
-      val jdbcuser = Configrature.jdbcuser(system)
-      val jdbcpassword = Configrature.jdbcpassword(system)
-      val jdbcurl = Configrature.jdbcurl(system)
+      val jdbcuser = system.settings.config.getValue("akka.serverclient.dbconfig.user").unwrapped().toString()
+      val jdbcpassword = system.settings.config.getValue("akka.serverclient.dbconfig.password").unwrapped().toString()
+      val jdbcurl = system.settings.config.getValue("akka.serverclient.dbconfig.jdbcurl").unwrapped().toString()
       
-      val webhost= Configrature.webhost(system)
-      val webport = Configrature.webport(system)
       
       if (servertype == "server"){
         val dbactor = system.actorOf(Props(classOf[DbActor],Array(jdbcurl, jdbcuser, jdbcpassword)), name = "dbActor")
         system.actorOf(Props(classOf[ServerActor],clientPath.toList), name = "serverActor")
         
         var handler = system.actorOf(Props(classOf[HttpServerActor], dbactor), name = "webActor")
-        IO(Http) ! Http.Bind(handler, interface = webhost, port = webport)
-//        system.actorOf(Props(classOf[ClientActor], serverPath, clientPath.toList), name = "clientActor")
+        IO(Http) ! Http.Bind(handler, interface = "192.168.109.195", port = 18087)
       }
       else if(servertype == "client"){
         system.actorOf(Props(classOf[ClientActor], serverPath, clientPath.toList), name = "clientActor")

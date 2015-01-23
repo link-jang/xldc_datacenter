@@ -3,10 +3,11 @@ package akka_sample.xldc.network
 import java.nio.ByteBuffer
 import scala.collection.mutable.ArrayBuffer
 
-class BufferMessage(id_ : Int, val buffers: ArrayBuffer[ByteBuffer], var ackId: Int) 
+case class BufferMessage(id_ : Int, val buffers: ArrayBuffer[ByteBuffer], var ackId: Int)
   extends Message(Message.BUFFER_MESSAGE, id_) {
+
+  val initialSize = currentSize()
   var gotChunkForSendingOnce = false
-  
   
   def currentSize() = {
     if (buffers == null || buffers.isEmpty) 0
@@ -16,7 +17,7 @@ class BufferMessage(id_ : Int, val buffers: ArrayBuffer[ByteBuffer], var ackId: 
       
   }
   
-  def size = currentSize
+  def size = initialSize
   
   def getChunkForSending(maxChunkSize: Int): Option[MessageChunk] = {
     require( maxChunkSize >= 0 )
@@ -28,7 +29,7 @@ class BufferMessage(id_ : Int, val buffers: ArrayBuffer[ByteBuffer], var ackId: 
        return Some(newChunk)  
       
     }
-    
+//    println(buffers(0).remaining() + "-----------------")
     while (! buffers.isEmpty) {
       val buffer = buffers(0)
       if( buffer.remaining() == 0){
@@ -44,7 +45,7 @@ class BufferMessage(id_ : Int, val buffers: ArrayBuffer[ByteBuffer], var ackId: 
         buffer.position(buffer.position() + newBuffer.remaining())
         val newChunk = new MessageChunk(new MessageChunkHeader(
             typ, id, size, newBuffer.remaining, ackId, hasError, sendAddress), newBuffer)
-        
+
         gotChunkForSendingOnce = true
         return Some(newChunk)
       }
@@ -54,6 +55,8 @@ class BufferMessage(id_ : Int, val buffers: ArrayBuffer[ByteBuffer], var ackId: 
     None
     
   }
+
+  def hasAckId() = (ackId != 0)
   
   def getChunkForReceiving(chunkSize: Int): Option[MessageChunk] = {
     // STRONG ASSUMPTION: BufferMessage created when receiving data has ONLY ONE data buffer
@@ -68,8 +71,10 @@ class BufferMessage(id_ : Int, val buffers: ArrayBuffer[ByteBuffer], var ackId: 
       }
       val newBuffer = buffer.slice().limit(chunkSize).asInstanceOf[ByteBuffer]
       buffer.position(buffer.position + newBuffer.remaining)
+
       val newChunk = new MessageChunk(new MessageChunkHeader(
           typ, id, size, newBuffer.remaining, ackId, hasError, sendAddress), newBuffer)
+
       return Some(newChunk)
     }
     None

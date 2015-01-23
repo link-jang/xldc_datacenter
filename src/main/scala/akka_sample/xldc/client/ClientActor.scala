@@ -1,11 +1,17 @@
 package akka_sample.xldc.client
 
+import java.nio.ByteBuffer
+
 import akka.actor.Actor
 import akka.actor.ActorSelection
 import akka.actor.ActorLogging
 import akka_sample.xldc.TransactionObj._
 import akka.actor.Props
 import akka.actor.ActorRef
+import akka_sample.xldc.network.BufferMessage
+import akka_sample.xldc.persist.TaskMeta
+
+import scala.collection.mutable.ArrayBuffer
 
 class ClientActor (serverPath: String, clients: List[String]) extends Actor with ActorLogging {
   
@@ -25,8 +31,16 @@ class ClientActor (serverPath: String, clients: List[String]) extends Actor with
   def receive = {
     
     case RpcNotify(task) => {
-      log.info("recieve RpcNotify" + task.id + task.desFile)
-      sender ! RpcResponseNotify(task, true)
+
+      task match {
+        case null =>
+          log.info("recieve null RpcNotify")
+          sender ! RpcResponseNotify(null, true)
+        case t : TaskMeta =>
+          log.info("recieve RpcNotify" + task.id + task.desFile)
+          sender ! RpcResponseNotify(task, true)
+      }
+
     }
     case RequstCheckFile(taskArray) => {
       log.info("recieve CheckFile" + taskArray(0).oriFile)
@@ -35,8 +49,14 @@ class ClientActor (serverPath: String, clients: List[String]) extends Actor with
     
     case ResponseCheckFile(response) =>
       serverActor ! ResponseCheckFile(response)
+
+
+    case message: Array[Byte] => {
+      val len = message.length
+      println(len)
+    }
     
-    case _ => println("")
+    case _ => println("----")
     
     
     
