@@ -31,8 +31,12 @@ import DefaultJsonProtocol._
 import spray.util._
 
 class HttpServerActor(dbactor: ActorRef) extends Actor with ActorLogging {
-  
 
+  override def preStart(){
+
+    println("start http ................")
+
+  }
  
   import context.dispatcher
   
@@ -55,7 +59,7 @@ class HttpServerActor(dbactor: ActorRef) extends Actor with ActorLogging {
       sender ! taskdata
       
     case HttpRequest(GET, Uri.Path("/stat/css/bootstrap.min.css"), _, _, _) =>
-      println("2 " + System.currentTimeMillis())
+
       sender ! bootstrap_stat(Array("/stat/css/bootstrap.min.css"))
       
       
@@ -84,8 +88,7 @@ class HttpServerActor(dbactor: ActorRef) extends Actor with ActorLogging {
     }
     
     case HttpRequest(GET, Uri.Path("/getTaskData_json"), _, _, _) =>{ 
-      
-      println("webactor")
+
       
       implicit val timeout = Timeout(5 seconds)
       val future = dbactor ? RequstTaskData

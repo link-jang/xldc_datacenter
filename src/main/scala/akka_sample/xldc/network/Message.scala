@@ -173,8 +173,29 @@ object Message {
   def createBufferMessage(ackId: Int): BufferMessage = {
     createBufferMessage(new Array[ByteBuffer](0), ackId)
   }
-  
-  
+
+  def createBufferMessage(id: Long, dataBuffer: ByteBuffer): BufferMessage =
+    createBufferMessage(id, dataBuffer, 0)
+
+  def createBufferMessage(id: Long, dataBuffer: ByteBuffer, ackId: Int): BufferMessage = {
+    if (dataBuffer == null) {
+      createBufferMessage(id, Array(ByteBuffer.allocate(0)), ackId)
+    } else {
+      createBufferMessage(id, Array(dataBuffer), ackId)
+    }
+  }
+
+  def createBufferMessage(id: Long,dataBuffers: Seq[ByteBuffer], ackId: Int): BufferMessage = {
+    if (dataBuffers == null) {
+      return new BufferMessage(id.toInt, new ArrayBuffer[ByteBuffer], ackId)
+    }
+    if (dataBuffers.exists(_ == null)) {
+      throw new Exception("Attempting to create buffer message with null buffer")
+    }
+    new BufferMessage(id.toInt, new ArrayBuffer[ByteBuffer] ++= dataBuffers, ackId)
+  }
+
+
 }
 
 

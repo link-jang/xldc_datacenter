@@ -4,12 +4,14 @@ import java.nio._
 import java.nio.channels._
 import java.util.LinkedList
 import java.util.logging
+import org.apache.commons.logging.LogFactory
+
 import scala.collection.mutable.{ArrayBuffer, HashMap}
 import java.util.concurrent.ConcurrentLinkedQueue
 
 abstract class Connection (val channel: SocketChannel, val selector: Selector)   {
   
-  val log = logging.Logger.getLogger(this.getClass().getSimpleName())
+  val log = LogFactory.getLog(this.getClass)
   
   channel.configureBlocking(false)
   channel.socket().setTcpNoDelay(true)
@@ -83,7 +85,6 @@ abstract class Connection (val channel: SocketChannel, val selector: Selector)  
     buffer.get(bytes)
     
     bytes.foreach( byte => print(byte + " "))
-    println("(" + position + ")")
     buffer.position(curpostion)
   }
   
@@ -170,7 +171,6 @@ class SendingConnection(val address : InetSocketAddress, selector_ : Selector)
     outbox.synchronized{
       outbox.addMessage(message)
       needForceReregister = true
-      println("outbox length:" + outbox.messages.size())
     }
     
     if (channel.isConnected()){
@@ -192,11 +192,9 @@ class SendingConnection(val address : InetSocketAddress, selector_ : Selector)
     try {
       channel.register(selector, SelectionKey.OP_CONNECT)
       channel.connect(address)
-      println("Initiating connection to [" + address + "]:" + channel.isConnected())
       log.info("Initiating connection to [" + address + "]")
     }catch {
       case e: Exception => {
-        println("Error connection to " + address + e.toString)
         log.info("Error connection to " + address + e.toString)
       }
       
@@ -211,7 +209,7 @@ class SendingConnection(val address : InetSocketAddress, selector_ : Selector)
       // selection - though need not necessarily always complete successfully.
       val connected = channel.finishConnect
       if (!force && !connected) {
-        println(
+        log.info(
           "finish connect failed [" + address + "], " + outbox.messages.size + " messages pending")
         return false
       }
@@ -221,10 +219,10 @@ class SendingConnection(val address : InetSocketAddress, selector_ : Selector)
       // (10 or so)
       // Is highly unlikely unless there was an unclean close of socket, etc
       registerInterest()
-      println("Connected to [" + address + "], " + outbox.messages.size + " messages pending")
+      log.info("Connected to [" + address + "], " + outbox.messages.size + " messages pending")
     } catch {
       case e: Exception => {
-        println("Error finishing connection to " + address, e)
+        log.error("Error finishing connection to " + address, e)
 
       }
     }

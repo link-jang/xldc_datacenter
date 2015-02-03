@@ -30,12 +30,13 @@ class CheckFileActor extends Actor with ActorLogging{
       
       val len = files.length
       val response = new Array[FileStatus](len)
-      for(i <- 0 to len ){
-        val md5 = getFileMD5(new java.io.File(files.apply(i).oriFile))
+      for(i <- 0 to len -1  ){
+        val md5 = getFileMD5(new java.io.File(files(i).oriFile))
+        println(md5)
         if (md5 == null){
-          response(i) = new FileStatus(files.apply(i).id, false, "")
+          response(i) = new FileStatus(files(i).id, false, "")
         }else{
-          response(i) = new FileStatus(files.apply(i).id, true, md5)
+          response(i) = new FileStatus(files(i).id, true, md5)
         }
       }
       

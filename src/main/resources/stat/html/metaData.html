@@ -9,10 +9,11 @@
 		
 	</head>
    <body>
-     <h1>Say hello to xldc monitor!</h1>
+
    	 <div class="row">
   		<div class="col-md-1"></div>
   		<div class="col-md-10">
+			<h1>Meta File</h1>
   			<table class="table table-hover">
   				<thead>
   				 	<tr>
@@ -28,7 +29,28 @@
   				
   				</tbody>
   			</table>
+			<!--
+			<div class="btn-group">
+				<button id= "btn_create" type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal">create</button>
+				<button id= "btn_edit" type="button" class="btn btn-info">edit </button>
+				<button id="btn_delete" type="button" class="btn btn-danger">delete</button>
+
+			</div>
+			-->
+			<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+				<div class="modal-dialog">
+					<div class="modal-content">
+						<div class="modal-header">
+						</div>
+						<div class="modal-body">
+						</div>
+						<div class="modal-footer">
+						</div>
+					</div>
+				</div>
+			</div>
   		</div>
+
 	 </div>
      
    <script >
@@ -56,6 +78,15 @@
    		  	
    		  }
    	   })
+
+
+   	   $.get("#btn_create").click(function(){
+
+   	   })
+
+
+
+
    	 
     })
    </script>

@@ -1,4 +1,8 @@
 package akka_sample.xldc.master
+
+import java.sql.Timestamp
+import java.text.SimpleDateFormat
+
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import org.squeryl.SessionFactory
@@ -9,15 +13,15 @@ import akka_sample.xldc.persist._
 import akka_sample.xldc.persist.RsyncDataMeta
 import akka_sample.xldc.TransactionObj._
 
-
+import java.util.Date
 
 
 class DbActor(args: Array[String]) extends Actor with ActorLogging{
   
-  require(args.length == 3)
+
   
   override def preStart(): Unit = {
-    println("dbactor 1")
+    println("start dbActor ................")
     Class.forName("com.mysql.jdbc.Driver");
     SessionFactory.concreteFactory = Some(() =>
     	Session.create(
@@ -40,6 +44,7 @@ class DbActor(args: Array[String]) extends Actor with ActorLogging{
         transaction {
           def tasks = 
             from(xldc_db.taskMeta) (s => where (s.isCompleted === false) select (s))
+
           sender ! ResponseCompleteTask(tasks.toArray)
         }
         
@@ -55,6 +60,7 @@ class DbActor(args: Array[String]) extends Actor with ActorLogging{
         transaction {
           def tasks = 
             from(xldc_db.taskMeta) (s => where (s.isNotified === false and s.isExits === true) select (s))
+          log.debug("task not notify num:" + tasks.size)
           sender ! ResponseNotifyTask(tasks.toArray)
         }
         
@@ -70,6 +76,7 @@ class DbActor(args: Array[String]) extends Actor with ActorLogging{
 	      transaction{
 	        def tasks = 
 	        from (xldc_db.taskMeta) (s => where(s.isExits === false)select(s) )
+          log.debug("task not exist num:" + tasks.size)
 	        sender ! ResponseExistTask(tasks.toArray)
 	      }
       
@@ -89,8 +96,9 @@ class DbActor(args: Array[String]) extends Actor with ActorLogging{
 	        
 	        update (xldc_db.taskMeta) (s => 
 	          where(s.id === filestatus.taskId)
-	          set (s.isExits := filestatus.isExists, s.md5 := filestatus.md5)
+	          set (s.isExits := filestatus.isExists, s.md5 := filestatus.md5 )
 	          )
+          log.debug("update exist task id :" + filestatus.taskId + "/isexists :" + filestatus.isExists)
 	      }
       
       }catch {
@@ -106,8 +114,9 @@ class DbActor(args: Array[String]) extends Actor with ActorLogging{
 	        
 	        update (xldc_db.taskMeta) (s => 
 	          where(s.id === id)
-	          set (s.isNotified := status)
+	          set (s.isNotified := status , s.notifiedTime := Some(new Timestamp(System.currentTimeMillis()).toString))
 	          )
+          log.debug("update Notify task id :" + id + "/ isNotify :" + status)
 	      }
       
       }catch {
@@ -123,8 +132,9 @@ class DbActor(args: Array[String]) extends Actor with ActorLogging{
 	        
 	        update (xldc_db.taskMeta) (s => 
 	          where(s.id === id)
-	          set (s.isCompleted := status)
+	          set (s.isCompleted := status, s.completedTime := Some(new Timestamp(System.currentTimeMillis()).toString))
 	          )
+          log.debug("update Complete task id :" + id + "/ Complete :" + status)
 	      }
       
       }catch {
@@ -139,13 +149,44 @@ class DbActor(args: Array[String]) extends Actor with ActorLogging{
     case RequstGenerTask(fileType, day, hour) => {
       try{
 	      transaction{
-	        def files = 
-	          from(xldc_db.rsyncDataMeta) (s => where(s.fileType === fileType) select(s))
+          log.debug("create task :" + day + "/" + hour)
+
+
+          if(fileType.toLowerCase().equals("hour")){
+            def files =
+              from(xldc_db.rsyncDataMeta) (s => where(s.fileType === "hour" ) select(s))
+
+            files.foreach(file => {
+              val count = from(xldc_db.taskMeta)(s => where(s.dataId === file.id and s.hour === hour and s.day === day) select(s))
+
+              if(count.size == 0){
+                xldc_db.taskMeta.insert(new TaskMeta(file.id, file.oriMechin, file.oriFile.replace("${day}", day).replace("${hour}", hour),
+                  file.destMechin, file.desFile.replace("${hour}", hour).replace("${day}", day), fileType, day, hour, false, false, false))
+              }
+
+            })
+
+          }else if(fileType.toLowerCase().equals("day")){
+            def files =
+              from(xldc_db.rsyncDataMeta) (s => where(s.fileType === "day" ) select(s))
+
+            files.foreach(file => {
+              val count = from(xldc_db.taskMeta)(s => where(s.dataId === file.id and s.day === day) select(s))
+
+              if(count.size == 0){
+                xldc_db.taskMeta.insert(new TaskMeta(file.id, file.oriMechin, file.oriFile.replace("${day}", day),
+                  file.destMechin, file.oriFile.replace("${day}", day), fileType, day, null, false, false, false))
+              }
+
+            })
+
+          }
+
+
+
+
 	        
-	        files.foreach(file => 
-	        	xldc_db.taskMeta.insert(new TaskMeta(file.id,file.oriMechin ,  file.oriFile.replace("${day}", day),
-	        	    file.destMechin , file.oriFile.replace("${hour}", hour),fileType, day, hour, false, false, false))
-	        )
+
 	        sender ! ResponseGenerTask(true)
 	      }
       
@@ -195,12 +236,11 @@ class DbActor(args: Array[String]) extends Actor with ActorLogging{
     
     
     case RequstTaskData => {
-      
-      println("dbactor")
+
       try{
         transaction{
           val tasks = 
-            from(xldc_db.taskMeta)(t => where(t.isCompleted === false)select (t))
+            from(xldc_db.taskMeta)(t => where(true === true)select (t))
             
             sender ! ResponseTaskData(tasks.toArray)
         }

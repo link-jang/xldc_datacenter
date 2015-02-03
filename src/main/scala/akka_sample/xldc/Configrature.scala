@@ -2,7 +2,9 @@ package akka_sample.xldc
 import akka.actor.ActorSystem
 
 object Configrature {
-  
+
+  implicit  val system = ActorSystem("DataCenterSystem")
+
   def servertype(system: ActorSystem) = system.settings.config.getValue("akka.serverclient.type").unwrapped().toString()
   def serverPath(system: ActorSystem) = system.settings.config.getValue("akka.serverclient.server").unwrapped().toString()
   def clientPath(system: ActorSystem) = system.settings.config.getValue("akka.serverclient.client").unwrapped().toString().replaceAll("(\\[|\\]|\\s+)", "").split(",")
@@ -14,5 +16,10 @@ object Configrature {
   
   def webhost(system: ActorSystem) = system.settings.config.getValue("akka.web.hostname").unwrapped().toString()
   def webport(system: ActorSystem) = system.settings.config.getValue("akka.web.port").unwrapped().toString().toInt
+
+  def datatport(system: ActorSystem) = system.settings.config.getValue("akka.serverclient.datatport").unwrapped().toString.toInt
+  println(webhost(system))
+
+
 
 }

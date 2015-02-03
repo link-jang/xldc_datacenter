@@ -22,8 +22,7 @@ object FileUtil {
         digest = MessageDigest.getInstance("MD5");  
         in = new FileInputStream(file);  
         len = in.read(buffer, 0, 1024)
-        while (len != -1) {  
-          println(len)
+        while (len != -1) {
           digest.update(buffer, 0, len);  
           len = in.read(buffer, 0, 1024)
         }  

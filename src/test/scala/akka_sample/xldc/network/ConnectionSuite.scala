@@ -13,7 +13,7 @@ class  ConnectionSuite extends FunSuite {
   
 	test("security default off") {
    
-    val manager = new ConnectionManager("192.168.107.75", 2553)
+    val manager = new ConnectionManager(2553)
     var receivedMessage = false
     manager.onReceiveMessage( (msg: Message) => {
       receivedMessage = true
@@ -25,7 +25,7 @@ class  ConnectionSuite extends FunSuite {
     buffer.flip
 
     val bufferMessage = Message.createBufferMessage(buffer.duplicate)
-    Await.result(manager.sendMessageReliably( bufferMessage), 10 seconds)
+    Await.result(manager.sendMessageReliably("192.168.109.195", bufferMessage), 10 seconds)
 
     assert(receivedMessage == true)
 

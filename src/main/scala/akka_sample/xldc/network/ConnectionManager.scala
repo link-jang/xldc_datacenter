@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.{LinkedBlockingDeque, ThreadPoolExecutor, TimeUnit}
 
 
-
+import akka.actor.ActorLogging
 import org.apache.commons.logging.LogFactory
 
 
@@ -28,7 +28,7 @@ import scala.util.control.NonFatal
 
 object test {
   def main(str: Array[String]): Unit ={
-    val manager = new ConnectionManager("192.168.109.195", 1232)
+    val manager = new ConnectionManager( 1232)
     var receivedMessage = false
     manager.onReceiveMessage( (msg: Message) => {
       receivedMessage = true
@@ -51,13 +51,13 @@ object test {
 
     val bufferMessage = Message.createBufferMessage(  ByteBuffer.wrap("目录".getBytes) )
 
-    val result = Await.result(manager.sendMessageReliably( bufferMessage) , Duration.Inf).asInstanceOf[BufferMessage]
+    val result = Await.result(manager.sendMessageReliably("192.168.109.195", bufferMessage) , Duration.Inf).asInstanceOf[BufferMessage]
     println("-----------------:" + result.id)
 
   }
 }
 
-class ConnectionManager (host: String, port: Int, name: String = "Connection manager"){
+class ConnectionManager (port: Int, name: String = "Connection manager") {
 
   val log = LogFactory.getLog(this.getClass)
   
@@ -103,7 +103,7 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
     override def afterExecute(r: Runnable, t: Throwable): Unit = {
       super.afterExecute(r, t)
       if (t != null && NonFatal(t)) {
-        println("Error in handleMessageExecutor is not handled properly", t)
+        log.error("Error in handleMessageExecutor is not handled properly", t)
       }
     }
   }
@@ -118,7 +118,7 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
     override def afterExecute(r: Runnable, t: Throwable): Unit = {
       super.afterExecute(r, t)
       if (t != null && NonFatal(t)) {
-        println("Error in handleReadWriteExecutor is not handled properly", t)
+        log.error("Error in handleReadWriteExecutor is not handled properly", t)
       }
     }
   }
@@ -134,7 +134,7 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
     override def afterExecute(r: Runnable, t: Throwable): Unit = {
       super.afterExecute(r, t)
       if (t != null && NonFatal(t)) {
-        println("Error in handleConnectExecutor is not handled properly", t)
+        log.error("Error in handleConnectExecutor is not handled properly", t)
       }
     }
   }
@@ -226,7 +226,7 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
           }
         } catch {
           case NonFatal(e) => {
-            println("Error when writing to ", e)
+            log.error("Error when writing to ", e)
           }
         }
       }
@@ -265,7 +265,7 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
           }
         } catch {
           case NonFatal(e) => {
-            println("Error when reading from ", e)
+            log.error("Error when reading from ", e)
             throw e
           }
         }
@@ -300,7 +300,7 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
           conn.finishConnect(true)
         } catch {
           case NonFatal(e) => {
-            println("Error when finishConnect for " , e)
+            log.error("Error when finishConnect for " , e)
           }
         }
       }
@@ -312,7 +312,7 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
       key.interestOps(0)
     } catch {
       // ignore exceptions
-      case e: Exception => println("Ignoring exception", e)
+      case e: Exception => log.error("Ignoring exception", e)
     }
 
     val conn = connectionsByKey.getOrElse(key, null)
@@ -326,13 +326,13 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
 
         } catch {
           // ignore exceptions
-          case NonFatal(e) => println("Ignoring exception", e)
+          case NonFatal(e) => log.error("Ignoring exception", e)
         }
         try {
           conn.close()
         } catch {
           // ignore exceptions
-          case NonFatal(e) => println("Ignoring exception", e)
+          case NonFatal(e) => log.error("Ignoring exception", e)
         }
       }
     })
@@ -348,7 +348,7 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
     wakeupSelector()
   }
   def handleConnectionError(connection: Connection, e: Throwable) {
-    println("Handling connection error on connection to " )
+    log.error("Handling connection error on connection to " )
 //    connection.getRemoteConnectionManagerId())
 //    removeConnection(connection)
   }
@@ -462,16 +462,16 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
 
               }
             } else {
-              println("Key not valid ? " + key)
+              log.error("Key not valid ? " + key)
               throw new CancelledKeyException()
             }
           } catch {
             case e: CancelledKeyException => {
-              println("key already cancelled ? " + key, e)
+              log.error("key already cancelled ? " + key, e)
               triggerForceCloseByException(key, e)
             }
             case e: Exception => {
-              println("Exception processing key " + key, e)
+              log.error("Exception processing key " + key, e)
               triggerForceCloseByException(key, e)
             }
           }
@@ -491,16 +491,16 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
                 val key = allKeys.next()
                 try {
                   if (! key.isValid) {
-                    println("Key not valid ? " + key)
+                    log.error("Key not valid ? " + key)
                     throw new CancelledKeyException()
                   }
                 } catch {
                   case e: CancelledKeyException => {
-                    println("key already cancelled ? " + key, e)
+                    log.error("key already cancelled ? " + key, e)
                     triggerForceCloseByException(key, e)
                   }
                   case e: Exception => {
-                    println("Exception processing key " + key, e)
+                    log.error("Exception processing key " + key, e)
                     triggerForceCloseByException(key, e)
                   }
                 }
@@ -510,12 +510,12 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
           }
 
         if (selectedKeysCount == 0) {
-          println("Selector selected " + selectedKeysCount + " of " + selector.keys.size +
+          log.info("Selector selected " + selectedKeysCount + " of " + selector.keys.size +
             " keys:/"  )
         }
 
         if (selectorThread.isInterrupted) {
-          println("Selector thread was interrupted!")
+          log.error("Selector thread was interrupted!")
           return
         }
 
@@ -528,20 +528,20 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
             try {
               if (key.isValid) {
                 if (key.isAcceptable) {
-                  println("acceptConnecetion")
+                  log.debug("acceptConnecetion")
                   acceptConnection(key)
                 } else
                 if (key.isConnectable) {
 
-                  println("triggerConnect")
+                  log.debug("triggerConnect")
                   triggerConnect(key)
                 } else
                 if (key.isReadable) {
-                  println("triggerRead")
+                  log.debug("triggerRead")
                   triggerRead(key)
                 } else
                 if (key.isWritable) {
-                  println("triggerWrite")
+                  log.debug("triggerWrite")
                   triggerWrite(key)
                 }
               } else {
@@ -552,11 +552,11 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
               // weird, but we saw this happening - even though key.isValid was true,
               // key.isAcceptable would throw CancelledKeyException.
               case e: CancelledKeyException => {
-                println("key already cancelled ? " + key, e)
+                log.error("key already cancelled ? " + key, e)
                 triggerForceCloseByException(key, e)
               }
               case e: Exception => {
-                println("Exception processing key " + key, e)
+                log.error("Exception processing key " + key, e)
                 triggerForceCloseByException(key, e)
               }
             }
@@ -564,7 +564,7 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
         }
       }
     } catch {
-      case e: Exception => println("Error in select loop", e)
+      case e: Exception => log.error("Error in select loop", e)
     }
   }
   
@@ -581,10 +581,10 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
         newConnection.onReceive(receiveMessage)
         addListeners(newConnection)
         addConnection(newConnection)
-        println("Accepted connection from [" + newConnection.remoteAddress + "]")
+        log.info("Accepted connection from [" + newConnection.remoteAddress + "]")
       } catch {
         // might happen in case of issues with registering with selector
-        case e: Exception => println("Error in accept loop", e.toString())
+        case e: Exception => log.error("Error in accept loop" + e.toString())
         								throw e
       }
 
@@ -616,7 +616,7 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
                  *     caused by long pause like GC, you can set
                  *     larger value than default to spark.core.connection.ack.wait.timeout
                  */
-                println(s"Could not find reference for received ack Message ${message.id}")
+                log.error(s"Could not find reference for received ack Message ${message.id}")
               }
             }
           }
@@ -631,20 +631,20 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
 
             if (ackMessage.isDefined) {
               if (!ackMessage.get.isInstanceOf[BufferMessage]) {
-                println("Response to " + bufferMessage + " is not a buffer message, it is of type "
+                log.info("Response to " + bufferMessage + " is not a buffer message, it is of type "
                   + ackMessage.get.getClass)
               } else if (!ackMessage.get.asInstanceOf[BufferMessage].hasAckId) {
-                println("Response to " + bufferMessage + " does not have ack id set")
+                log.info("Response to " + bufferMessage + " does not have ack id set")
                 ackMessage.get.asInstanceOf[BufferMessage].ackId = bufferMessage.id
               }
             }
           } catch {
             case e: Exception => {
-              println(s"Exception was thrown while processing message", e)
+              log.error(s"Exception was thrown while processing message", e)
               ackMessage = Some(Message.createErrorMessage(e, bufferMessage.id))
             }
           } finally {
-            sendMessage(ackMessage.getOrElse {
+            sendMessage(connection.remoteAddress.getHostName, ackMessage.getOrElse {
               Message.createBufferMessage(bufferMessage.id)
             })
           }
@@ -656,17 +656,17 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
   
    def receiveMessage(connection: Connection, message: Message) {
 //    val connectionManagerId = ConnectionManagerId.fromSocketAddress(message.senderAddress)
-    println("Received [" + message + "] ")
+     log.debug("Received [" + message + "] ")
     val runnable = new Runnable() {
       val creationTime = System.currentTimeMillis
       def run() {
         try {
-          println("Handler thread delay is " + (System.currentTimeMillis - creationTime) + " ms")
+          log.info("Handler thread delay is " + (System.currentTimeMillis - creationTime) + " ms")
           handleMessage(message, connection)
-          println("Handling delay is " + (System.currentTimeMillis - creationTime) + " ms")
+          log.info("Handling delay is " + (System.currentTimeMillis - creationTime) + " ms")
         } catch {
           case NonFatal(e) => {
-            println("Error when handling messages from ", e)
+            log.error("Error when handling messages from ", e)
 //            connection.callOnExceptionCallbacks(e)
           }
         }
@@ -675,7 +675,7 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
     handleMessageExecutor.execute(runnable)
     /* handleMessage(connection, message) */
   }
-  private def sendMessage(message: Message): Unit = {
+  private def sendMessage(host: String, message: Message): Unit = {
     sendMessage(host, port, message)
   }
 
@@ -689,25 +689,24 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
       val newConnection = new SendingConnection(inetSocketAddress, selector)
       newConnection.onException {
         case (conn, e) => {
-          println("Exception while sending message.", e)
+          log.error("Exception while sending message.", e)
 //          reportSendingMessageFailure(message.id, e)
         }
       }
-      println("creating new sending connection: " )
       registerRequests.enqueue(newConnection)
       newConnection
     }
 //    val connection = connectionsById.getOrElseUpdate(connectionManagerId, startNewConnection())
     val connection = connectionsById.getOrElseUpdate(message.id, startNewConnection)
     message.sendAddress = new InetSocketAddress(host, port)
-    println("Before Sending [" + message + "] + " )
+    log.debug("Before Sending [" + message + "] + " )
 
     connection.send(message)
     wakeupSelector()
   }
   
     
-  def sendMessageReliably( message: Message)
+  def sendMessageReliably(host: String, message: Message)
       : Future[Message] = {
     val promise = Promise[Message]()
 
@@ -730,12 +729,12 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
               if (!p.tryFailure(e)) {
                 // If we reach here, then someone else has already signalled success or failure
                 // on this promise, so log a warning:
-                println("Ignore error because promise is completed", e)
+                log.error("Ignore error because promise is completed", e)
               }
             } else {
               // The WeakReference was empty, which should never happen because
               // sendMessageReliably's caller should have a strong reference to promise.future;
-              println("Promise was garbage collected; this should never happen!", e)
+              log.error("Promise was garbage collected; this should never happen!", e)
             }
 
 
@@ -752,7 +751,7 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
         case scala.util.Failure(e) =>
           // Indicates a failure where we either never sent or never got ACK'd
           if (!promise.tryFailure(e)) {
-            println("Ignore error because promise is completed", e)
+            log.error("Ignore error because promise is completed", e)
           }
         case scala.util.Success(ackMessage) =>
           if (ackMessage.hasError) {
@@ -763,13 +762,13 @@ class ConnectionManager (host: String, port: Int, name: String = "Connection man
             val e = new IOException(
               s"sendMessageReliably failed with ACK that signalled a remote error: $errorMsg")
             if (!promise.tryFailure(e)) {
-              println("Ignore error because promise is completed", e)
+              log.error("Ignore error because promise is completed", e)
             }
           } else {
 
             if (!promise.trySuccess(ackMessage)) {
 
-              println("Drop ackMessage because promise is completed")
+              log.error("Drop ackMessage because promise is completed")
             }
           }
       }

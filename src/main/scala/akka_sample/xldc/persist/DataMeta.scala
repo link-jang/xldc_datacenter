@@ -56,7 +56,8 @@ case class TaskMeta (
 )extends Meta with KeyedEntity[Long]{
   
   def this(dataId: Long, oriMechin:String, oriFile:String, desMechin:String, desFile: String, taskType: String, day: String, hour: String, isExits: Boolean, isNotified: Boolean, isCompleted:Boolean) 
-  	= this(0, dataId, oriMechin, oriFile, desMechin, desFile, taskType, day, hour, isExits, isNotified, Some(new Timestamp(0).toString()), isCompleted, Some(new Timestamp(0).toString()),0, "")
+  	= this(0, dataId, oriMechin, oriFile, desMechin, desFile, taskType, day, hour, isExits, isNotified, Some(new Timestamp(System.currentTimeMillis()).toString()), isCompleted,
+    Some(new Timestamp(System.currentTimeMillis()).toString()),0, "")
 }
 
 
